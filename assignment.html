@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub Contribution Graph</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+
+        .navbar {
+            height: 60px;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+
+        }
+
+        input {
+            width: 30%;
+            height: 20px;
+            border: 1px solid rgb(17, 16, 16);
+            border-radius: 15px;
+            padding: 5px;
+        }
+
+        input:focus,
+        button:focus {
+            outline: none;
+        }
+
+        button {
+            width: 60px;
+            height: 30px;
+            border-radius: 15px;
+            background-color: white;
+            border: 2px solid black;
+            padding: 5px;
+            transition-duration: 0.1s;
+
+        }
+
+        button:hover {
+            background-color: black;
+            color: white;
+        }
+
+        #contribution-graph {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            overflow: auto;
+
+        }
+
+        .contribution-bar {
+            height: 15%;
+            width: 90%;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding-left: 5px;
+        }
+
+        #userData {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 40px;
+        }
+
+        img {
+            flex: 1;
+            height: 100px;
+            width: 100px;
+            border-radius: 50px;
+            object-fit: cover;
+        }
+    </style>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+
+<body>
+
+    <div id="contribution-graph">
+
+        <div class="navbar">
+            <input type="text" placeholder="Enter Github user name" id="userNameFinder" />
+            <button onclick="changeUrl()">Search</button>
+        </div>
+        <div id="userData"></div>
+        <div id="graph" style="width:100%;max-width:700px"></div>
+    </div>
+
+    <script>
+        //GitHub API endpoint for fetching user contributions.
+        // Replace 'YOUR_GITHUB_USERNAME' with the GitHub username you want to fetch the graph for.
+        
+        var username = 'Anirbanp2001';
+        //onclick function
+        function changeUrl() {
+            document.getElementById("userData").innerHTML="";
+            username = document.getElementById('userNameFinder').value != "" ? document.getElementById("userNameFinder").value : 'Anirbanp2001';
+            console.log(`${username}`);
+            // Fetch and display the User profile picture and user name when the page loads.
+            fetchUserNameAndImage();
+            // Fetch and display the contribution graph when the page loads.
+            fetchAndDisplayContributionGraph();
+        }
+
+        //Fetch Username and User Profile image
+        async function fetchUserNameAndImage() {
+            // Fetch user information from GitHub API.
+            const response = await fetch(`https://api.github.com/users/${username}`);
+            //Processing the information to JSON
+            var info = await response.json();
+
+            //Creating the image element
+            var imageSrc = info.avatar_url;
+            var node = document.getElementById('userData');
+            var imgContainer = document.createElement('img');
+            imgContainer.src = imageSrc;
+            imgContainer.alt = "User Profile";
+            node.appendChild(imgContainer);
+
+            //Creating the text Nodes
+            var header = document.createElement('h1');
+            var header2 = document.createElement('h3');
+            header.appendChild(document.createTextNode("User name:"));
+            header2.appendChild(document.createTextNode(`${info.login}`));
+            var textContainer = document.createElement('div');
+            textContainer.appendChild(header);
+            textContainer.appendChild(header2);
+
+            //Appending the nodes to a child
+            node.appendChild(textContainer);
+        }
+        // Function to fetch and display the contribution graph.
+        async function fetchAndDisplayContributionGraph() {
+            try {
+                // Fetch user events from GitHub API.
+                const response = await fetch(`https://api.github.com/users/${username}/events`);
+                const events = await response.json();
+
+                // Process events to extract contribution data.
+                const contributions = events.filter(event => event.type === 'PushEvent');
+
+                // Create an array of daily contributions for the GitHub-like graph.
+                const graphData = contributions.reduce((acc, event) => {
+                    const date = new Date(event.created_at).toLocaleDateString();
+                    acc[date] = (acc[date] || 0) + event.payload.size;
+                    return acc;
+                }, {});
+                const xValues = Object.keys(graphData).map(function (key) {
+                    return key;
+                })
+                const yValues = Object.keys(graphData).map(function (key) {
+                    return graphData[key];
+                })
+
+                //Creating the graph
+                const data = [{
+                    x: xValues,
+                    y: yValues,
+                    type: "bar",
+                    orientation: "v",
+                    marker: { color: "rgba(0,0,255,0.6)" }
+                }];
+
+                const layout = {
+                    title: {
+                        text: "Contributions Graph",
+                        font: {
+                            color: "grey",
+                            size: "30"
+                        }
+                    },
+
+                    height: 400,
+                };
+
+                //Plotting the graph
+                Plotly.newPlot("graph", data, layout);
+            } catch (error) {
+                console.error('Error fetching data:', error);
+            }
+        }
+        fetchUserNameAndImage();
+        fetchAndDisplayContributionGraph();
+    </script>
+
+</body>
+
+</html>
